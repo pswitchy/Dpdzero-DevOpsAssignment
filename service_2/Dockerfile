@@ -1,13 +1,23 @@
-FROM ghcr.io/astral-sh/uv:0.1.39-python3.12
+FROM python:3.12-slim AS builder
+
+RUN pip install uv
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
+COPY requirements.txt* ./
 
-RUN uv pip sync --system
+RUN if [ -f requirements.txt ]; then uv pip install --system -r requirements.txt; else pip install flask; fi
 
-COPY app.py .
+COPY . .
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /app .
 
 EXPOSE 8002
 
-CMD ["uv", "run", "--host", "0.0.0.0", "--port", "8002", "app.py"]
+CMD ["python", "app.py"]

@@ -4,12 +4,17 @@ WORKDIR /app
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/main .
+RUN go mod init service1 && \
+    CGO_ENABLED=0 GOOS=linux go build -o main .
 
-FROM scratch
+FROM alpine:latest
 
-COPY --from=builder /app/main /app/main
+RUN apk --no-cache add ca-certificates wget
+
+WORKDIR /root/
+
+COPY --from=builder /app/main .
 
 EXPOSE 8001
 
-CMD ["/app/main"]
+CMD ["./main"]

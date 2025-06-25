@@ -1,34 +1,40 @@
 version: '3.8'
 
 services:
-  service1:
-    build:
-      context: ./service_1
-    container_name: service1
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8001/ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  service2:
-    build:
-      context: ./service_2
-    container_name: service2
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8002/ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   nginx:
-    build:
-      context: ./nginx
-    container_name: nginx-proxy
+    build: ./nginx
     ports:
       - "8080:80"
     depends_on:
-      service1:
-        condition: service_healthy
-      service2:
-        condition: service_healthy
+      - service1
+      - service2
+    networks:
+      - app-network
+
+  service1:
+    build: ./service_1
+    expose:
+      - "8001"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8001/health"] 
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  service2:
+    build: ./service_2
+    expose:
+      - "8002"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  app-network:
+    driver: bridge
